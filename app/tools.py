@@ -5,8 +5,10 @@
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
+
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 MAX_RESULTS = 3
@@ -43,7 +45,7 @@ def search_glossary(query: str) -> str:
     # 「r」のような短い別名が何にでも当たらないよう、名前側が短いものは除く
     partial = [
         e for e in glossary
-        if e not in exact and any(q in n or (len(n) >= 3 and n in q) for n in _names(e))
+        if e not in exact and any((len(q) >= 2 and q in n) or (len(n) >= 3 and n in q)for n in _names(e))
     ]
     in_definition = [
         e for e in glossary
@@ -77,3 +79,28 @@ def get_lecture_summary(lecture: int) -> str:
         available = sorted(p.stem for p in (DATA_DIR / "lectures").glob("*.md"))
         return f"第{lecture}回の要点はまだありません。用意されている回: {', '.join(available)}"
     return path.read_text(encoding="utf-8")
+
+def make_quiz(lecture: int) -> str:
+    """
+    指定した回の用語から1つを選び、確認問題と答えを返す。
+    
+    「第2回の確認問題を出して」のように、復習用の問題を求められたときに使う
+    """
+    terms = [
+        entry for entry in load_glossary()
+        if entry["lecture"] == lecture
+    ]
+
+    if not terms:
+        return f"第{lecture}回の用語が見つかりません。"
+
+    entry = random.choice(terms)
+
+    return json.dumps(
+        {
+            "question": f"「{entry['term']}」とは何ですか？",
+            "answer": entry["definition"],
+            "lecture": lecture,
+        },
+        ensure_ascii=False,
+    )
