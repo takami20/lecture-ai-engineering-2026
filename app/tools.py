@@ -6,9 +6,9 @@
 
 import json
 import random
+from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
-
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 MAX_RESULTS = 3
@@ -113,3 +113,36 @@ def make_quiz(lecture: int) -> str:
         },
         ensure_ascii=False,
     )
+
+def save_learning_log(
+    lecture: int,
+    learned: str,
+    difficulty: str = "",
+    note: str = "",
+) -> str:
+    """学習ログを保存する。
+
+    lecture は講義回、learned は学んだ内容、
+    difficulty は難しかった点、note は補足メモ。
+    """
+    if lecture < 1:
+        return "講義回は1以上で指定してください。"
+
+    if not learned.strip():
+        return "学んだ内容を入力してください。"
+
+    log = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "lecture": lecture,
+        "learned": learned.strip(),
+        "difficulty": difficulty.strip(),
+        "note": note.strip(),
+    }
+
+    path = DATA_DIR / "learning_logs.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(log, ensure_ascii=False) + "\n")
+
+    return f"第{lecture}回の学習ログを保存しました。"
