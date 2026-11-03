@@ -33,6 +33,9 @@ INSTRUCTIONS = """\
 - 用語集に見つからないことは、推測で断定せず「用語集にはない」と伝える。
 - 回答の最後に、関係する回（第N回）を示す。
 - 宿題の答えそのものは書かず、考え方のヒントで導く。
+-学習ログの保存を頼まれたら、必ず save_learning_log ツールを呼んでください。
+保存前の承認は、ツール実行時にシステムがユーザーに必ず求めます。
+そのため、ツールを呼ぶ前に文章で確認する必要はありません。
 """
 #- 用語や講座に固有のことを答える前に、必ず search_glossary で用語集を確認する。
 # モデルは実行時に渡す（テストではAPIを呼ばない TestModel に差し替えるため）
@@ -142,9 +145,17 @@ def main() -> None:
 
         if isinstance(result.output, DeferredToolRequests):
             approvals = {}
-
             for request in result.output.approvals:
-                print("学習ログを保存してよいですか？ [y/N]")
+                call_args = request.args_as_dict()  # モデルがツールに渡そうとしている引数
+
+                print("以下の内容で学習ログを保存します。")
+                print(f"  講義回      : 第{call_args.get('lecture')}回")
+                print(f"  学んだ内容  : {call_args.get('learned')}")
+                print(f"  難しかった点: {call_args.get('difficulty')}")
+                if call_args.get("note"):
+                    print(f"  補足メモ    : {call_args.get('note')}")
+
+                print("保存してよいですか？ [y/N]")
                 answer = input().strip().lower()
                 approvals[request.tool_call_id] = answer in {"y", "yes"}
 
